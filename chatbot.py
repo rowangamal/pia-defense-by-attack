@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 import pprint
 import instruction_attack_defense_tools as ad_tools
@@ -8,18 +8,41 @@ class HuggingfaceChatbot:
     def __init__(self, model, max_mem_per_gpu='40GiB'):
         self.model = self.load_hugging_face_model(model, max_mem_per_gpu)
         self.tokenizer = AutoTokenizer.from_pretrained(model)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
+
+
+    # def load_hugging_face_model(self, model, max_mem_per_gpu='40GiB'):
+    #     MAX_MEM_PER_GPU = max_mem_per_gpu
+    #     map_list = {}
+    #     for i in range(torch.cuda.device_count()):
+    #         map_list[i] = MAX_MEM_PER_GPU
+    #     model = AutoModelForCausalLM.from_pretrained(
+    #         model,
+    #         device_map="auto",
+    #         max_memory=map_list,
+    #         torch_dtype="auto"
+    #     )
+    #     return model
 
     def load_hugging_face_model(self, model, max_mem_per_gpu='40GiB'):
         MAX_MEM_PER_GPU = max_mem_per_gpu
-        map_list = {}
-        for i in range(torch.cuda.device_count()):
-            map_list[i] = MAX_MEM_PER_GPU
+        map_list = {i: MAX_MEM_PER_GPU for i in range(torch.cuda.device_count())}
+
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+
         model = AutoModelForCausalLM.from_pretrained(
             model,
             device_map="auto",
             max_memory=map_list,
-            torch_dtype="auto"
+            quantization_config=bnb_config,   
+            torch_dtype=torch.float16
         )
         return model
 
