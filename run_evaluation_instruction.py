@@ -15,10 +15,12 @@ import csv
 
 
 def test(args):
+    os.makedirs(os.path.dirname(args.log_path), exist_ok=True)
     logger = Logger(args.log_path)
     logger.log(str(args))
     csv_rows = []
     csv_path = args.log_path.replace(".txt", ".csv")
+    os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     
     if "gpt" in args.model_path:
         model = GPTChatbot(args.model_path)
