@@ -1,61 +1,47 @@
 import torch
-import numpy as np
-import joblib
-
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import FunctionTransformer
 from sklearn.metrics import accuracy_score
-
+import joblib
 from sentence_transformers import SentenceTransformer
 
 
-class SVM_Embedding:
-    def __init__(
-        self,
-        embedding_model_name="sentence-transformers/all-MiniLM-L6-v2",
-        svm_params=None,
-        device=None
-    ):
-        """
-        Initializes SVM + Embedding pipeline.
 
-        :param embedding_model_name: HuggingFace / SentenceTransformer model name
-        :param svm_params: Dict of parameters for LinearSVC
-        :param device: "cpu" or "cuda"
-        """
+class SentenceEmbeddingTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, embedding_model_name="sentence-transformers/all-MiniLM-L6-v2", device=None):
+        self.embedding_model_name = embedding_model_name
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = None
 
-        self.embedder = SentenceTransformer(embedding_model_name, device=self.device)
+    def fit(self, X, y=None):
+        self.model = SentenceTransformer(self.embedding_model_name, device=self.device)
+        return self
 
-        self.svm_params = svm_params if svm_params else {
-            "C": 1.0,
-            "class_weight": "balanced"
-        }
-
-        # Wrap embedding function for sklearn pipeline
-        self.embedding_transformer = FunctionTransformer(
-            self._embed_texts,
-            validate=False
-        )
-
-        self.model = Pipeline([
-            ("embed", self.embedding_transformer),
-            ("svm", LinearSVC(**self.svm_params))
-        ])
-
-    def _embed_texts(self, texts):
-        """
-        Converts list of texts to normalized embeddings.
-        """
-        embeddings = self.embedder.encode(
-            texts,
+    def transform(self, X):
+        return self.model.encode(
+            X,
             batch_size=32,
             convert_to_numpy=True,
             normalize_embeddings=True,
             show_progress_bar=False
         )
-        return embeddings
+
+
+
+class SVM_Embedding:
+    def __init__(self, embedding_model_name="sentence-transformers/all-MiniLM-L6-v2", svm_params=None, device=None):
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.svm_params = svm_params if svm_params else {"C": 1.0, "class_weight": "balanced"}
+
+        # embedding transformer
+        self.embedding_transformer = SentenceEmbeddingTransformer(embedding_model_name, device=self.device)
+
+        # Pipeline
+        self.model = Pipeline([
+            ("embed", self.embedding_transformer),
+            ("svm", LinearSVC(**self.svm_params))
+        ])
 
     def train(self, X, y):
         self.model.fit(X, y)
