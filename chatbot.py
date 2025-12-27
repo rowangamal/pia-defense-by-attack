@@ -35,7 +35,8 @@ class HuggingfaceChatbot:
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_use_double_quant=True,
-            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            attn_implementation="flash_attention_2" if torch.cuda.is_bf16_supported() else None
         )
 
         model = AutoModelForCausalLM.from_pretrained(
@@ -89,19 +90,27 @@ class HuggingfaceChatbot:
             tokenize=False,
             add_generation_prompt=True
         )
-        input_ids = self.tokenizer(message).input_ids
-        input_ids = torch.tensor(input_ids).view(1,-1).to(self.model.device)
+        # input_ids = self.tokenizer(message).input_ids
+        inputs = self.tokenizer(message, return_tensors="pt").to(self.model.device)
+        # input_ids = torch.tensor(input_ids).view(1,-1).to(self.model.device)
         generation_config = self.model.generation_config
         generation_config.max_length = 8192
         generation_config.max_new_tokens = max_new_tokens
         generation_config.do_sample = False
         # generation_config.do_sample = True
         # generation_config.temperature = 0.0
-        output = self.model.generate(
-            input_ids,
-            generation_config=generation_config
-        )
-        response = self.tokenizer.batch_decode(output[:, input_ids.shape[1]:], skip_special_tokens=True)[0]
+        with torch.no_grad():
+            output = self.model.generate(
+                # input_ids,
+                **inputs,
+                generation_config=generation_config,
+                pad_token_id=self.tokenizer.eos_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                do_sample=False,
+                use_cache=True,
+            )
+        # response = self.tokenizer.batch_decode(output[:, inputs.input_ids.shape[1]:], skip_special_tokens=True)[0]
+        response = self.tokenizer.decode(output[0][inputs.input_ids.shape[1]:], skip_special_tokens=True)
         response = response.strip()
         return response
 
