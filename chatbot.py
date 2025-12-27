@@ -44,7 +44,7 @@ class HuggingfaceChatbot:
             device_map="auto",
             max_memory=map_list,
             quantization_config=bnb_config,   
-            torch_dtype=torch.float16
+            dtype=torch.float16
         )
         return model
 
