@@ -34,6 +34,7 @@ def test(args):
             count = []
             acc_count = []
             data = jload(args.data_path)
+            data = data[:10] 
             llm_input, d_items= form_llm_input(
                 data,
                 eval(a),
