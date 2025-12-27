@@ -3,7 +3,7 @@ import random
 import numpy as np
 from datasets import load_dataset
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score
+from sklearn.metrics import classification_report, accuracy_score, f1_score
 
 from svm_tf_idf import SVM_TF_IDF  
 from svm_embedding import SVM_Embedding
@@ -45,12 +45,21 @@ def split_data(X, y):
     X_val, X_test, y_val, y_test = train_test_split(X_tmp, y_tmp, test_size=0.5, random_state=SEED, stratify=y_tmp)
     return X_train, X_val, X_test, y_train, y_val, y_test
 
+# def evaluate_model(model, X, y, name):
+#     y_pred = model.predict(X)
+#     print(f"\n=== {name} ===")
+#     print("Accuracy:", accuracy_score(y, y_pred))
+#     print(classification_report(
+#         y, y_pred, target_names=[ID2LABEL[i] for i in range(len(ID2LABEL))]
+#     ))
+
 def evaluate_model(model, X, y, name):
     y_pred = model.predict(X)
     print(f"\n=== {name} ===")
-    print("Accuracy:", accuracy_score(y, y_pred))
+    print("F1 (macro):", f1_score(y, y_pred, average="macro"))
     print(classification_report(
-        y, y_pred, target_names=[ID2LABEL[i] for i in range(len(ID2LABEL))]
+        y, y_pred,
+        target_names=[ID2LABEL[i] for i in range(len(ID2LABEL))]
     ))
 
 # -------------------------
