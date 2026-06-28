@@ -15,12 +15,20 @@ async def lifespan(app: FastAPI):
     global model_engine
     if SERVICE_TYPE == "instruction":
         model_engine = SafetyClassifier(
-            model_name="ProtectAI/deberta-v3-base-prompt-injection-v2",  # Replace with your model path
+            # model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-large/checkpoint-67200",  # Replace with your model path
+            # model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base/checkpoint-168000",  # Replace with your model path
+            # model_name = "/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base-xxz224/checkpoint-20241",
+            # model_name = "/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-large-xxz224/checkpoint-22490",
+            model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base-xxz224-no-escape/checkpoint-18740",
             classifier_id="Instruction_Safety_v1"
         )
     else:
         model_engine = SafetyClassifier(
-            model_name="ProtectAI/deberta-v3-base-prompt-injection-v2",  # Replace with your model path
+            # model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-large/checkpoint-67200",  # Replace with your model path
+            # model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base/checkpoint-168000",  # Replace with your model path
+            # model_name = "/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base-xxz224/checkpoint-20241",
+            # model_name = "/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-large-xxz224/checkpoint-22490",
+            model_name="/home/rowan/Rowans_CSE/Term10/Team-Sherlock/models/bert_models/roberta-base-xxz224-no-escape/checkpoint-18740",
             classifier_id="Data_Safety_v1"
         )
     yield

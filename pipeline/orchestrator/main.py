@@ -16,9 +16,14 @@ target_llm = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global target_llm
-    print("Loading Target LLM: google/gemma-2-2b-it...")
-    # This will use the 4-bit BitsAndBytes config from your chatbot.py
-    target_llm = HuggingfaceChatbot("google/gemma-2-2b-it")
+    print("Loading Target LLM: microsoft/Phi-3-mini-4k-instruct...")
+    target_llm = HuggingfaceChatbot("microsoft/Phi-3-mini-4k-instruct")
+    
+    # print("Loading Target LLM: Qwen/Qwen2-7B-Instruct...")
+    # target_llm = HuggingfaceChatbot("Qwen/Qwen2-7B-Instruct")
+
+    # print("Loading Target LLM: meta-llama/Meta-Llama-3-8B-Instruct...")
+    # target_llm = HuggingfaceChatbot("meta-llama/Meta-Llama-3-8B-Instruct")
     print("Target LLM Ready.")
     yield
     print("Shutting down Target LLM...")
@@ -43,10 +48,12 @@ async def generate_secure_response(request: UserRequest):
     instruction_text = request.instruction
     data_text = request.data
 
+    full_input = f"Instruction: {instruction_text}\nUser input: {data_text}"
+
     async with httpx.AsyncClient() as client:
         # 1. Run the filter layer concurrently
         instruction_task = call_classifier(client, CLASSIFIER_URLS["instruction"], instruction_text)
-        data_task = call_classifier(client, CLASSIFIER_URLS["data"], data_text)
+        data_task = call_classifier(client, CLASSIFIER_URLS["data"], full_input)
 
         instruction_result, data_result = await asyncio.gather(instruction_task, data_task)
 
@@ -70,6 +77,11 @@ async def generate_secure_response(request: UserRequest):
             instruction_text = defense_payload["instruction"]
             data_text = defense_payload["data"]
 
+            if defense_payload.get("system_modifier"):
+                instruction_text = (
+                    defense_payload["system_modifier"] + "\n\n" + instruction_text
+                )
+
         # 4. Format for Gemma
         # Because your chatbot.py already injects ad_tools.SYS_INPUT, we just combine
         # the instruction and data here before passing it to the respond() method.
@@ -81,6 +93,8 @@ async def generate_secure_response(request: UserRequest):
 
         return {
             "status": "success",
+            "instruction_classifier": instruction_result,
+            "data_classifier": data_result,
             "detected_attack": data_result.attack_type if not data_result.is_safe else None,
             "applied_defense": applied_defense,
             "final_prompt_sent_to_llm": final_prompt,

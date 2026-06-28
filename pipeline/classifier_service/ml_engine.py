@@ -15,14 +15,37 @@ class SafetyClassifier:
         self.model.to(self.device)
         self.model.eval()
 
+        # open prompt injection dataset
         self.defense_mapping = {
-            "ignore": "sandwich",
-            "completion_real": "spotlight",
-            "escape_deletion": "isolation",
-            "escape_separation": "isolation",
             "naive": "instructional",
-            "injection": "spotlight",
+            "ignore": "adversarial_repeat",   # fight fire with fire
+            "escape": "delimiter_flood",       # drown the escape attempt
+            "combine": "completion_poison"     # pre-empt the completion stage
         }
+
+        # # xxz224 dataset
+        # self.defense_mapping = {
+        #     "naive":           "instructional",
+        #     "ignore":          "adversarial_repeat",
+        #     "escape":          "delimiter_flood",
+        #     "combine":         "completion_poison",
+        #     "fake_completion": "completion_poison",   # pre-injected completion neutralises the fake one
+        # }
+
+        # # map your attack classes to defense strategies
+        # self.defense_mapping = {
+        #     "naive": "instructional",
+        #     "ignore": "sandwich",
+        #     "escape": "isolation",
+        #     "combine": "spotlight"
+        # }
+        # self.defense_mapping = {
+        #     "naive": "instructional",
+        #     "ignore": "sandwich",
+        #     "fake_completion": "isolation",
+        #     "combine": "spotlight"
+        # }
+        self.safe_labels = ["benign"]
 
         print(f"[{self.classifier_id}] Ready on {self.device}.")
 
@@ -31,7 +54,8 @@ class SafetyClassifier:
             text,
             return_tensors="pt",
             truncation=True,
-            max_length=512
+            max_length=512,
+            padding=True
         )
 
         inputs = {key: value.to(self.device) for key, value in inputs.items()}
@@ -41,11 +65,9 @@ class SafetyClassifier:
             logits = outputs.logits
 
         predicted_class_id = logits.argmax(dim=-1).item()
-
-        predicted_label = self.model.config.id2label.get(predicted_class_id, f"LABEL_{predicted_class_id}")
-        predicted_label = predicted_label.lower()
-
-        if predicted_label in ["safe", "benign", "none", "label_0"]:
+        predicted_label = self.model.config.id2label[predicted_class_id].lower()
+        print(f"[{self.classifier_id}] predicted = {predicted_label}")
+        if predicted_label in self.safe_labels:
             return {
                 "is_safe": True,
                 "classifier_name": self.classifier_id
